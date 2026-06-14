@@ -1,86 +1,63 @@
 """
-=========================================================
+==========================================================
 
 QuantEdge AI
 
-Trade Candidate Model
+Trade Candidate
 
-=========================================================
+Universal object passed between all engines.
+
+==========================================================
 """
 
 from dataclasses import dataclass, field
 from typing import Dict, Optional
-from datetime import datetime
 
 
 @dataclass
 class TradeCandidate:
 
-    # ------------------------
+    # -----------------------------------------
     # Identity
-    # ------------------------
+    # -----------------------------------------
 
     symbol: str
 
     direction: str
 
-    option_symbol: str = ""
+    option_symbol: str
 
-    sector: str = ""
+    strike: float
 
-    # ------------------------
+    expiry: str
+
+    # -----------------------------------------
     # Prices
-    # ------------------------
+    # -----------------------------------------
 
-    stock_price: float = 0.0
+    stock_price: float
 
-    option_price: float = 0.0
+    option_price: float
 
-    strike: float = 0.0
+    bid: float = 0.0
 
-    expiry: str = ""
-
-    # ------------------------
-    # Feature Store
-    # ------------------------
-
-    features: Dict = field(default_factory=dict)
-
-    # ------------------------
-    # Metrics
-    # ------------------------
-
-    technical_score: float = 0.0
-
-    option_score: float = 0.0
-
-    liquidity_score: float = 0.0
-
-    execution_score: float = 0.0
-
-    expected_value: float = 0.0
-
-    probability: float = 0.0
-
-    expected_return: float = 0.0
-
-    risk_reward: float = 0.0
-
-    confidence: float = 0.0
-
-    # ------------------------
-    # Liquidity
-    # ------------------------
+    ask: float = 0.0
 
     spread: float = 0.0
+
+    # -----------------------------------------
+    # Liquidity
+    # -----------------------------------------
 
     volume: int = 0
 
     open_interest: int = 0
 
-    # ------------------------
+    liquidity_score: float = 0.0
+
+    # -----------------------------------------
     # Greeks
-    # ------------------------
+    # -----------------------------------------
 
     implied_volatility: float = 0.0
 
@@ -92,61 +69,75 @@ class TradeCandidate:
 
     vega: float = 0.0
 
-    # ------------------------
-    # Trade Levels
-    # ------------------------
+    # -----------------------------------------
+    # Strategy
+    # -----------------------------------------
 
-    entry_price: float = 0.0
+    probability: float = 0.0
 
-    stop_loss: float = 0.0
+    confidence: float = 0.0
 
-    target: float = 0.0
+    expected_return: float = 0.0
 
-    trailing_stop: float = 0.0
+    expected_value: float = 0.0
 
-    # ------------------------
-    # Decision
-    # ------------------------
+    risk_reward: float = 0.0
 
-    state: str = "CREATED"
+    score: float = 0.0
+
+    rank: int = 0
+
+    # -----------------------------------------
+    # State
+    # -----------------------------------------
 
     execute: bool = False
 
     rejection_reason: Optional[str] = None
 
-    created_at: datetime = field(default_factory=datetime.now)
+    state: str = "NEW"
 
-    # ------------------------
-    # Methods
-    # ------------------------
+    # -----------------------------------------
+    # Features
+    # -----------------------------------------
 
-    def add_feature(self, name: str, value):
+    features: Dict = field(default_factory=dict)
 
-        self.features[name] = value
+    # -----------------------------------------
 
-    def get_feature(self, name: str, default=None):
+    def add_feature(self, key, value):
 
-        return self.features.get(name, default)
+        self.features[key] = value
 
-    def reject(self, reason: str):
+    # -----------------------------------------
+
+    def get_feature(self, key, default=None):
+
+        return self.features.get(key, default)
+
+    # -----------------------------------------
+
+    def reject(self, reason):
 
         self.execute = False
 
+        self.rejection_reason = reason
+
         self.state = "REJECTED"
 
-        self.rejection_reason = reason
+    # -----------------------------------------
 
     def approve(self):
 
         self.execute = True
 
-        self.state = "READY"
+        self.rejection_reason = None
 
-    def archive(self):
+        self.state = "APPROVED"
 
-        self.state = "ARCHIVED"
+    # -----------------------------------------
 
-    def summary(self):
+    def to_dict(self):
 
         return {
 
@@ -154,15 +145,29 @@ class TradeCandidate:
 
             "direction": self.direction,
 
-            "score": self.technical_score,
+            "option_symbol": self.option_symbol,
+
+            "strike": self.strike,
+
+            "expiry": self.expiry,
+
+            "stock_price": self.stock_price,
+
+            "option_price": self.option_price,
 
             "probability": self.probability,
 
+            "confidence": self.confidence,
+
             "expected_return": self.expected_return,
+
+            "expected_value": self.expected_value,
 
             "risk_reward": self.risk_reward,
 
-            "confidence": self.confidence,
+            "score": self.score,
+
+            "rank": self.rank,
 
             "state": self.state,
 
