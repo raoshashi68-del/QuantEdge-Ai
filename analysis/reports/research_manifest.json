@@ -1,0 +1,11 @@
+{
+    "strategy_version": "QuantEdge_v1.0",
+    "dataset_name": "mock_validation",
+    "dataset_start": "2024-01-01T00:00:00",
+    "dataset_end": "2024-02-11T15:00:00",
+    "trade_count": 1000,
+    "symbols": [
+        "RELIANCE"
+    ],
+    "resolution": "5m"
+}

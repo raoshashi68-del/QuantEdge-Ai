@@ -18,11 +18,14 @@ class MasterScanner:
 
         self,
 
-        pipeline,
+        pipeline=None,
+        **kwargs
 
     ):
 
         self.pipeline = pipeline
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     # -----------------------------------------
 
@@ -41,6 +44,8 @@ class MasterScanner:
     ):
 
         try:
+            if not self.pipeline:
+                return []
 
             return self.pipeline.scan_symbol(
 
@@ -64,15 +69,17 @@ class MasterScanner:
 
         self,
 
-        universe,
+        universe=None,
 
-        resolution,
+        resolution="1",
 
-        start,
+        start="",
 
-        end,
+        end="",
 
     ):
+        if universe is None:
+            universe = []
 
         candidates = []
 

@@ -1,171 +1,53 @@
 """
 ==========================================================
-
 QuantEdge AI
-
-Ranking Engine
-
-Responsibilities
-----------------
-1. Rank all candidates
-2. Compute Expected Value
-3. Compute Opportunity Score
-4. Return sorted list
-
+Ranking Engine v2
 ==========================================================
 """
-
 from typing import List
 
-
 class RankingEngine:
-
     def __init__(self):
         pass
 
-    # ------------------------------------------------
-    # Expected Value
-    # ------------------------------------------------
-
-    @staticmethod
-    def expected_value(probability,
-                       reward,
-                       risk):
-
-        return (
-            probability * reward
-            -
-            (1 - probability) * risk
-        )
-
-    # ------------------------------------------------
-    # Technical Score
-    # ------------------------------------------------
-
-    @staticmethod
-    def technical_score(candidate):
-
-        score = 0
-
-        adx = candidate.get_feature("adx", 0)
-        rsi = candidate.get_feature("rsi", 50)
-        rel_vol = candidate.get_feature(
-            "relative_volume",
-            1
-        )
-
-        if adx >= 25:
-            score += 25
-        elif adx >= 20:
-            score += 15
-
-        if 55 <= rsi <= 70:
-            score += 20
-
-        if rel_vol >= 3:
-            score += 20
-        elif rel_vol >= 2:
-            score += 15
-        elif rel_vol >= 1:
-            score += 10
-
-        if candidate.spread <= 0.5:
-            score += 15
-
-        if candidate.open_interest >= 100000:
-            score += 20
-
-        return score
-
-    # ------------------------------------------------
-    # Rank
-    # ------------------------------------------------
-
-    def rank(
-        self,
-        candidates: List
-    ):
-
+    def rank(self, candidates: List):
         for candidate in candidates:
-
-            candidate.technical_score = (
-                self.technical_score(
-                    candidate
-                )
+            # Safely extract values (they should exist by this stage)
+            ev = candidate.expected_value_result.expected_value if candidate.expected_value_result else 0.0
+            conf = candidate.confidence_result.confidence if candidate.confidence_result else 0.0
+            prob = candidate.probability_result.probability if candidate.probability_result else 0.0
+            
+            # Extract evidence metrics and normalize to 0-1
+            exec_score = (candidate.evidence.execution / 100.0) if candidate.evidence else 0.0
+            cons_score = (candidate.evidence.consistency / 100.0) if candidate.evidence else 0.0
+            
+            # Mathematical merger for ranking
+            final_score = (
+                0.50 * ev +
+                0.20 * conf +
+                0.15 * prob +
+                0.10 * exec_score +
+                0.05 * cons_score
             )
+            
+            candidate.score = final_score
 
-            candidate.expected_value = (
-                self.expected_value(
-                    candidate.probability / 100,
-                    candidate.expected_return,
-                    max(
-                        1,
-                        candidate.expected_return /
-                        max(candidate.risk_reward, 1)
-                    )
-                )
-            )
+        # Sort descending by final score
+        candidates.sort(key=lambda x: x.score, reverse=True)
 
-        candidates.sort(
-
-            key=lambda x: (
-
-                x.expected_value,
-
-                x.technical_score,
-
-                x.confidence
-
-            ),
-
-            reverse=True
-
-        )
-
-        for rank, candidate in enumerate(
-            candidates,
-            start=1
-        ):
-
+        # Assign rank and state
+        for rank, candidate in enumerate(candidates, start=1):
             candidate.rank = rank
-
             candidate.state = "RANKED"
 
         return candidates
-
-    # ------------------------------------------------
-    # Top N
-    # ------------------------------------------------
-
+        
     @staticmethod
-    def top(
-        candidates,
-        n=10
-    ):
-
+    def top(candidates, n=10):
         return candidates[:n]
 
-    # ------------------------------------------------
-    # Opportunity Gap
-    # ------------------------------------------------
-
     @staticmethod
-    def opportunity_gap(
-        candidates
-    ):
-
+    def opportunity_gap(candidates):
         if len(candidates) < 2:
-
             return None
-
-        first = candidates[0]
-
-        second = candidates[1]
-
-        return (
-
-            first.expected_value
-            -
-            second.expected_value
-
-        )
+        return candidates[0].score - candidates[1].score

@@ -98,10 +98,22 @@ class TradeCandidate:
     state: str = "NEW"
 
     # -----------------------------------------
-    # Features
+    # Features & Institutional Evidence
     # -----------------------------------------
 
     features: Dict = field(default_factory=dict)
+    
+    evidence: Optional[object] = None
+
+    probability_result: Optional[object] = None
+    
+    expected_return_result: Optional[object] = None
+
+    risk_result: Optional[object] = None
+
+    expected_value_result: Optional[object] = None
+
+    confidence_result: Optional[object] = None
 
     # -----------------------------------------
 

@@ -19,84 +19,19 @@ Responsibilities
 
 class Controller:
 
-    def __init__(
+    def __init__(self, pipeline):
+        self.pipeline = pipeline
 
-        self,
-
-        scanner,
-
-        filter_engine,
-
-        ranking_engine,
-
-        decision_engine,
-
-    ):
-
-        self.scanner = scanner
-
-        self.filter_engine = filter_engine
-
-        self.ranking_engine = ranking_engine
-
-        self.decision_engine = decision_engine
-
-    # --------------------------------------------------
-
-    def run(self):
-
-        candidates = self.scanner.scan()
-
-        if not candidates:
-
-            return {
-
-                "decision": None,
-
-                "accepted": [],
-
-                "rejected": []
-
-            }
-
-        accepted, rejected = self.filter_engine.apply_all(
-
-            candidates
-
+    def run(self, resolution="1", start="", end=""):
+        import datetime
+        if not start or not end:
+            today = datetime.date.today()
+            start_date = today - datetime.timedelta(days=30)
+            start = start_date.strftime("%Y-%m-%d")
+            end = today.strftime("%Y-%m-%d")
+            
+        return self.pipeline.run(
+            resolution=resolution,
+            start=start,
+            end=end
         )
-
-        if not accepted:
-
-            return {
-
-                "decision": None,
-
-                "accepted": accepted,
-
-                "rejected": rejected,
-
-            }
-
-        ranked = self.ranking_engine.rank(
-
-            accepted
-
-        )
-
-        decision = self.decision_engine.decide(
-
-            ranked
-
-        )
-
-        return {
-
-            "decision": decision,
-
-            "accepted": accepted,
-
-            "rejected": rejected,
-
-            "ranked": ranked,
-
-        }

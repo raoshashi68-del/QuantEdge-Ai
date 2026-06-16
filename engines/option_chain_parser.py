@@ -56,10 +56,10 @@ class OptionChainParser:
                 option.get("symbol"),
 
             "type":
-                option.get("type"),
+                option.get("option_type"),
 
             "strike":
-                float(option.get("strike", 0)),
+                float(option.get("strike_price", 0)),
 
             "ltp":
                 float(option.get("ltp", 0)),
@@ -68,7 +68,7 @@ class OptionChainParser:
                 int(option.get("volume", 0)),
 
             "open_interest":
-                int(option.get("open_interest", 0)),
+                int(option.get("oi", 0)),
 
             "bid":
                 bid,

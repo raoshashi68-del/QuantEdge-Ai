@@ -136,20 +136,22 @@ class DataEngine:
                 )
 
         if "Datetime" in df.columns:
-
             df["Datetime"] = pd.to_datetime(
-
                 df["Datetime"]
-
             )
-
             df.set_index(
-
                 "Datetime",
-
                 inplace=True
-
             )
+
+        # QuantEdge Data Contract v1.0
+        df = df.sort_index()
+        df = df[~df.index.duplicated(keep="last")]
+
+        assert df.index.is_unique, "Data Contract Violation: Index not unique"
+        assert df.columns.is_unique, "Data Contract Violation: Columns not unique"
+        assert df.index.is_monotonic_increasing, "Data Contract Violation: Index not monotonic increasing"
+        assert {"Open", "High", "Low", "Close", "Volume"} <= set(df.columns), "Data Contract Violation: Missing OHLCV columns"
 
         return df
 
@@ -173,65 +175,53 @@ class DataEngine:
 
     ):
 
-        key = (
+        print("\n==========================")
+        print("DATAENGINE HISTORY DEBUG")
+        print("==========================")
+        print("Symbol:")
+        print(symbol)
+        print("Arguments:")
+        print(f"resolution={resolution}, start={start}, end={end}")
+        print("Provider:")
+        print(self.broker.__class__.__name__)
+        print("Fetching...")
 
-            symbol,
+        try:
 
-            resolution,
+            df = self.broker.history(
 
-            start,
+                symbol,
 
-            end
+                resolution,
 
-        )
+                start,
 
-        cached = self._get_cache(
+                end
 
-            key,
+            )
 
-            cache_seconds
+        except Exception as e:
+            print("Exception:")
+            import traceback
+            traceback.print_exc()
+            print(e)
+            raise
 
-        )
+        print("Result Type:")
+        print(type(df))
+        print("Is None:")
+        print(df is None)
+        print("Length:")
+        try:
+            print(len(df))
+        except:
+            print("N/A")
 
-        if cached is not None:
+        df = self.normalize(df)
 
-            return cached
+        if self.validate(df):
 
-        for _ in range(3):
-
-            try:
-
-                df = self.broker.history(
-
-                    symbol,
-
-                    resolution,
-
-                    start,
-
-                    end
-
-                )
-
-                df = self.normalize(df)
-
-                if self.validate(df):
-
-                    self._set_cache(
-
-                        key,
-
-                        df
-
-                    )
-
-                    return df
-
-            except Exception:
-
-                time.sleep(1)
-
-                continue
+            return df
 
         return None
 

@@ -1,0 +1,20 @@
+{
+    "Underlying_Rows": 76,
+    "Options_Rows": 456,
+    "Duplicate_Underlying_Rows": 0,
+    "Duplicate_Options_Rows": 0,
+    "Chronology_Violations": 0,
+    "Missing_CE": 0,
+    "Missing_PE": 0,
+    "Missing_Bid": 0,
+    "Missing_Ask": 0,
+    "Missing_OI": 0,
+    "Negative_OI": 0,
+    "Negative_Volume": 0,
+    "Negative_Bid": 0,
+    "Negative_Ask": 0,
+    "Spread_Violations": 0,
+    "Missing_Expiry": 0,
+    "Dataset_Health_Score": 100.0,
+    "Status": "PASS"
+}

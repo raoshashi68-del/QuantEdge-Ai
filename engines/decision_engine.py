@@ -1,224 +1,67 @@
 """
 ==========================================================
-
 QuantEdge AI
-
-Decision Engine
-
-Responsibilities
-----------------
-1. Decide whether to trade
-2. Compare Rank 1 vs Rank 2
-3. Check minimum quality
-4. Return EXECUTE or NO_TRADE
-
+Decision Engine v2
 ==========================================================
 """
-
 from dataclasses import dataclass
 from typing import Optional, List
 
-
 @dataclass
 class Decision:
-
     action: str
-
     candidate: Optional[object]
-
     reason: str
 
-    opportunity_gap: float
-
-
 class DecisionEngine:
-
     def __init__(
-
         self,
-
-        minimum_confidence=70,
-
-        minimum_rr=2.0,
-
-        minimum_expected_return=10.0,
-
-        minimum_gap=2.0,
-
+        minimum_confidence=0.50,
+        minimum_probability=0.50
     ):
-
         self.minimum_confidence = minimum_confidence
-        self.minimum_rr = minimum_rr
-        self.minimum_expected_return = minimum_expected_return
-        self.minimum_gap = minimum_gap
+        self.minimum_probability = minimum_probability
 
-    # --------------------------------------------------
-
-    @staticmethod
-    def _gap(first, second):
-
-        gap = first.expected_value - second.expected_value
-
-        return max(0.0, gap)
-
-    # --------------------------------------------------
-
-    def decide(
-        self,
-        ranked_candidates: List,
-    ):
-
-        if len(ranked_candidates) == 0:
-
+    def decide(self, ranked_candidates: List) -> Decision:
+        if not ranked_candidates:
             return Decision(
-
                 action="NO_TRADE",
-
                 candidate=None,
-
-                reason="NO_CANDIDATES",
-
-                opportunity_gap=0.0,
-
+                reason="NO_CANDIDATES"
             )
 
         best = ranked_candidates[0]
+        
+        # Safely extract values
+        ev = best.expected_value_result.expected_value if best.expected_value_result else 0.0
+        conf = best.confidence_result.confidence if best.confidence_result else 0.0
+        prob = best.probability_result.probability if best.probability_result else 0.0
 
-        if best.confidence < self.minimum_confidence:
-
+        if ev <= 0:
             return Decision(
-
                 action="NO_TRADE",
-
                 candidate=None,
-
-                reason="LOW_CONFIDENCE",
-
-                opportunity_gap=0.0,
-
+                reason="NEGATIVE_EXPECTED_VALUE"
             )
 
-        if best.risk_reward < self.minimum_rr:
-
+        if conf < self.minimum_confidence:
             return Decision(
-
                 action="NO_TRADE",
-
                 candidate=None,
-
-                reason="LOW_RISK_REWARD",
-
-                opportunity_gap=0.0,
-
+                reason="LOW_CONFIDENCE"
             )
 
-        if best.expected_return < self.minimum_expected_return:
-
+        if prob < self.minimum_probability:
             return Decision(
-
                 action="NO_TRADE",
-
                 candidate=None,
-
-                reason="LOW_EXPECTED_RETURN",
-
-                opportunity_gap=0.0,
-
-            )
-
-        if len(ranked_candidates) == 1:
-
-            best.approve()
-
-            return Decision(
-
-                action="EXECUTE",
-
-                candidate=best,
-
-                reason="ONLY_VALID_CANDIDATE",
-
-                opportunity_gap=float("inf"),
-
-            )
-
-        second = ranked_candidates[1]
-
-        gap = self._gap(
-
-            best,
-
-            second,
-
-        )
-
-        if gap < self.minimum_gap:
-
-            return Decision(
-
-                action="NO_TRADE",
-
-                candidate=None,
-
-                reason="OPPORTUNITY_GAP_TOO_SMALL",
-
-                opportunity_gap=gap,
-
+                reason="LOW_PROBABILITY"
             )
 
         best.approve()
 
         return Decision(
-
             action="EXECUTE",
-
             candidate=best,
-
-            reason="BEST_OPPORTUNITY",
-
-            opportunity_gap=gap,
-
+            reason="BEST_OPPORTUNITY"
         )
-
-    # --------------------------------------------------
-
-    @staticmethod
-    def summary(decision):
-
-        if decision.action == "NO_TRADE":
-
-            return {
-
-                "action": decision.action,
-
-                "reason": decision.reason,
-
-                "opportunity_gap": decision.opportunity_gap,
-
-            }
-
-        c = decision.candidate
-
-        return {
-
-            "action": decision.action,
-
-            "symbol": c.symbol,
-
-            "direction": c.direction,
-
-            "confidence": c.confidence,
-
-            "expected_return": c.expected_return,
-
-            "risk_reward": c.risk_reward,
-
-            "expected_value": c.expected_value,
-
-            "score": c.score,
-
-            "gap": decision.opportunity_gap,
-
-            "reason": decision.reason,
-
-        }

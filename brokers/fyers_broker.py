@@ -60,9 +60,13 @@ class FyersBroker:
 
     ):
 
+        fyers_symbol = symbol
+        if not fyers_symbol.startswith("NSE:"):
+            fyers_symbol = f"NSE:{symbol}-EQ"
+
         payload = {
 
-            "symbol": symbol,
+            "symbol": fyers_symbol,
 
             "resolution": resolution,
 
@@ -76,7 +80,24 @@ class FyersBroker:
 
         }
 
-        return self.fyers.history(payload)
+        raw = self.fyers.history(payload)
+
+        import pandas as pd
+
+        if isinstance(raw, dict):
+            if raw.get("s") == "ok" and "candles" in raw:
+                df = pd.DataFrame(raw["candles"], columns=["Datetime", "Open", "High", "Low", "Close", "Volume"])
+                
+                # Fyers timestamps are typically in epoch seconds
+                df["Datetime"] = pd.to_datetime(df["Datetime"], unit="s")
+                df = df.sort_values("Datetime", ascending=True)
+                df = df.reset_index(drop=True)
+                return df
+            else:
+                # API returned an error message or empty payload, raise it so it's visible in debug
+                raise Exception(f"Fyers API Error: {raw}")
+
+        return raw
 
     # -------------------------------------------------
 
@@ -98,21 +119,24 @@ class FyersBroker:
 
     # -------------------------------------------------
 
-    def option_chain(
-
-        self,
-
-        symbol,
-
-    ):
+    def option_chain(self, symbol):
+        
+        formatted_symbol = symbol
+        if not symbol.startswith("NSE:"):
+            formatted_symbol = f"NSE:{symbol}-EQ"
 
         payload = {
-
-            "symbol": symbol
-
+            "symbol": formatted_symbol,
+            "strikecount": 5,
+            "timestamp": ""
         }
 
-        return self.fyers.optionchain(payload)
+        response = self.fyers.optionchain(payload)
+        
+        if response and response.get("s") == "ok" and response.get("data"):
+            return response["data"].get("optionsChain", [])
+            
+        return []
 
     # -------------------------------------------------
 

@@ -27,43 +27,35 @@ class CandidateEngine:
         pass
 
     def create_candidate(
-
         self,
-
         symbol,
-
         direction,
-
         stock_price,
-
         option_symbol,
-
         option_price,
-
         strike,
-
         expiry,
-
         feature_vector,
-
+        volume,
+        open_interest,
+        bid,
+        ask,
+        spread_percent,
     ):
 
         candidate = TradeCandidate(
-
             symbol=symbol,
-
             direction=direction,
-
             option_symbol=option_symbol,
-
             stock_price=stock_price,
-
             option_price=option_price,
-
             strike=strike,
-
             expiry=expiry,
-
+            volume=volume,
+            open_interest=open_interest,
+            bid=bid,
+            ask=ask,
+            spread=spread_percent,
         )
 
         for key, value in feature_vector.items():

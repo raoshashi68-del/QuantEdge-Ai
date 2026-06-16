@@ -3,27 +3,20 @@
 
 QuantEdge AI
 
-Filter Engine
+Execution Validation Layer (formerly FilterEngine)
 
 Responsibilities
 
-1. Reject illiquid trades
-2. Reject wide spreads
-3. Reject low OI
-4. Reject low volume
-5. Reject weak ADX
-6. Return filtered candidates
+1. Reject physically impossible or nonsensical options
+2. Reject negative/zero prices
+3. Reject missing bid/ask
+4. Reject negative volume/OI
+5. Reject missing/invalid symbols and expiries
+6. Return filtered (validated) candidates
 
 ==========================================================
 """
-
-from config.settings import (
-    MIN_ADX,
-    MIN_VOLUME,
-    MIN_OI,
-    MAX_SPREAD_PERCENT,
-)
-
+import math
 
 class FilterEngine:
 
@@ -33,83 +26,96 @@ class FilterEngine:
     def apply(self, candidate):
 
         # ----------------------------
-        # ADX
+        # Invalid Option Symbol
         # ----------------------------
-
-        adx = candidate.get_feature("adx", 0)
-
-        if adx < MIN_ADX:
-
-            candidate.reject("ADX_TOO_LOW")
-
+        if not candidate.option_symbol or not isinstance(candidate.option_symbol, str):
+            candidate.reject("INVALID_OPTION_SYMBOL")
             return candidate
 
         # ----------------------------
-        # Relative Volume
+        # Missing Expiry
         # ----------------------------
-
-        rel_volume = candidate.get_feature(
-            "relative_volume",
-            0
-        )
-
-        if rel_volume < 1:
-
-            candidate.reject("LOW_RELATIVE_VOLUME")
-
+        if not candidate.expiry or not isinstance(candidate.expiry, str):
+            candidate.reject("MISSING_EXPIRY")
             return candidate
 
         # ----------------------------
-        # Option Volume
+        # Invalid Prices
         # ----------------------------
+        if candidate.option_price <= 0 or math.isnan(candidate.option_price):
+            candidate.reject("INVALID_OPTION_PRICE")
+            return candidate
 
-        if candidate.volume < MIN_VOLUME:
-
-            candidate.reject("LOW_OPTION_VOLUME")
-
+        if candidate.stock_price <= 0 or math.isnan(candidate.stock_price):
+            candidate.reject("INVALID_STOCK_PRICE")
             return candidate
 
         # ----------------------------
-        # Open Interest
+        # Missing/Invalid Bid/Ask
         # ----------------------------
+        if candidate.bid <= 0 or math.isnan(candidate.bid):
+            candidate.reject("MISSING_BID")
+            return candidate
 
-        if candidate.open_interest < MIN_OI:
-
-            candidate.reject("LOW_OPEN_INTEREST")
-
+        if candidate.ask <= 0 or math.isnan(candidate.ask):
+            candidate.reject("MISSING_ASK")
             return candidate
 
         # ----------------------------
-        # Spread
+        # Invalid Spread
         # ----------------------------
-
-        if candidate.spread > MAX_SPREAD_PERCENT:
-
-            candidate.reject("SPREAD_TOO_WIDE")
-
+        if candidate.ask < candidate.bid:
+            candidate.reject("NEGATIVE_SPREAD")
+            return candidate
+            
+        if math.isnan(candidate.spread):
+            candidate.reject("SPREAD_UNAVAILABLE")
             return candidate
 
-        candidate.state = "FILTERED"
+        # ----------------------------
+        # Negative/Invalid Volume
+        # ----------------------------
+        if candidate.volume < 0 or math.isnan(candidate.volume):
+            candidate.reject("NEGATIVE_VOLUME")
+            return candidate
 
+        # ----------------------------
+        # Negative/Invalid Open Interest
+        # ----------------------------
+        if candidate.open_interest < 0 or math.isnan(candidate.open_interest):
+            candidate.reject("NEGATIVE_OPEN_INTEREST")
+            return candidate
+
+        # ----------------------------
+        # NaN Greeks
+        # ----------------------------
+        if math.isnan(candidate.implied_volatility):
+            candidate.reject("NAN_IMPLIED_VOLATILITY")
+            return candidate
+            
+        candidate.state = "VALIDATED"
         return candidate
 
     def apply_all(self, candidates):
-
         accepted = []
-
         rejected = []
+        seen_symbols = set()
 
         for candidate in candidates:
-
+            # ----------------------------
+            # Duplicate Candidate
+            # ----------------------------
+            if candidate.option_symbol in seen_symbols:
+                candidate.reject("DUPLICATE_CANDIDATE")
+                rejected.append(candidate)
+                continue
+                
+            seen_symbols.add(candidate.option_symbol)
             candidate = self.apply(candidate)
 
-            if candidate.execute is False and \
-               candidate.rejection_reason is not None:
-
+            if candidate.execute is False and candidate.rejection_reason is not None:
                 rejected.append(candidate)
-
             else:
-
                 accepted.append(candidate)
 
         return accepted, rejected
